@@ -376,7 +376,15 @@ function computeOpennessAngle(wl) {
   let ratio = 1.0;
   let minR = 0.85;
   let maxR = 1.55;
-
+  if (saved.mode === "index_cam") {
+    const dx = wl[8].x - wl[5].x;
+    const dy = wl[8].y - wl[5].y;
+    let angle = (Math.atan2(dx, -dy) * 180) / Math.PI;
+    if (saved.invert) angle = -angle;
+    angle = clamp(angle * saved.gain, -180, 180);
+    const openNorm = clamp((angle + 180) / 360, 0, 1);
+    return { angle, openNorm };
+  }  
   if (saved.mode === "thumb_slide") {
     // Başparmak ucunun (4) serçe köküne (17) ve işaret köküne (5) göre durumu
     ratio = dist(wl[4], wl[17]) / palmSize;
