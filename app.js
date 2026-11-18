@@ -11,6 +11,7 @@ const video = document.getElementById("webcam");
 const canvas = document.getElementById("overlay");
 const ctx = canvas.getContext("2d");
 const videoWrap = document.getElementById("videoWrap");
+const touchPad = document.getElementById("touchPad");
 
 const offlineBadge = document.getElementById("offlineBadge");
 const wsBadge = document.getElementById("wsBadge");
@@ -95,6 +96,11 @@ const saved = JSON.parse(localStorage.getItem("tekmotor_calib_v13") || "null") |
 selMotionMode.value = saved.mode || "thumb_slide";
 chkInvert.checked = saved.invert;
 inpGain.value = saved.gain;
+function syncModeUI() {
+  if (saved.mode === "touch_pad") touchPad.classList.add("active");
+  else touchPad.classList.remove("active");
+}
+syncModeUI();
 
 function saveCalib() {
   localStorage.setItem("tekmotor_calib_v13", JSON.stringify(saved));
@@ -106,6 +112,7 @@ inpGain.addEventListener("change", () => { saved.gain = Number(inpGain.value) ||
 selMotionMode.addEventListener("change", () => {
   saved.mode = selMotionMode.value;
   saveCalib();
+syncModeUI();
 });
 btnCalOpen.addEventListener("click", () => {
   if (lastRatio === null) { alert("Önce kamerada elinizi gösterin."); return; }
@@ -487,4 +494,47 @@ function loop(now) {
     }
   }
   requestAnimationFrame(loop);
+
+
+let touchStart = null, touchPrev = null, touchDir = null;
+touchPad.addEventListener("pointerdown", (e) => {
+  touchPad.setPointerCapture(e.pointerId);
+  touchStart = { x: e.clientX, y: e.clientY };
+  touchPrev = { x: e.clientX, y: e.clientY };
+  touchDir = null;
+});
+touchPad.addEventListener("pointermove", (e) => {
+  if (!touchPrev) return;
+  if (!touchDir) {
+    const dist = Math.hypot(e.clientX - touchStart.x, e.clientY - touchStart.y);
+    if (dist >= 8) {
+      touchDir = { x: (e.clientX - touchStart.x) / dist, y: (e.clientY - touchStart.y) / dist };
+    }
+  }
+  if (touchDir) {
+    const dx = e.clientX - touchPrev.x;
+    const dy = e.clientY - touchPrev.y;
+    const proj = dx * touchDir.x + dy * touchDir.y;
+    let delta = proj * 0.6 * saved.gain;
+    if (saved.invert) delta = -delta;
+    smoothedAngle = clamp(smoothedAngle + delta, -180, 180);
+    touchPrev = { x: e.clientX, y: e.clientY };
+    valM1.textContent = Math.round(smoothedAngle) + "°";
+    const pct = Math.round(((smoothedAngle + 180) / 360) * 100);
+    openBar.style.width = pct + "%";
+    openPctText.textContent = "Açıklık: %" + pct;
+    const now = performance.now();
+    if (isArmed && now - lastSendTime >= 33) {
+      sendTarget(smoothedAngle, true);
+      lastSentAngle = smoothedAngle;
+      lastSendTime = now;
+    }
+  }
+});
+function resetTouch() {
+  touchStart = null;
+  touchPrev = null;
+  touchDir = null;
 }
+touchPad.addEventListener("pointerup", resetTouch);
+touchPad.addEventListener("pointercancel", resetTouch);}
