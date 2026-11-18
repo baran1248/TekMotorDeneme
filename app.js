@@ -79,8 +79,12 @@ let lastSentAngle = -180;
 let lastRatio = null;
 
 // Kalibrasyon ayarları (localStorage)
-const saved = JSON.parse(localStorage.getItem("tekmotor_calib_v11") || "null") || {
-  mode: "thumb_slide",
+const saved = JSON.parse(localStorage.getItem("tekmotor_calib_v13") || "null") || {
+  mode: "index_cam",
+  indexMinDeg: -180,
+  indexMaxDeg: 180,
+  palmMinDeg: -180,
+  palmMaxDeg: 180,
   thumbOpenRatio: 1.55,
   thumbClosedRatio: 0.85,
   openRatio: 1.90,
@@ -93,7 +97,7 @@ chkInvert.checked = saved.invert;
 inpGain.value = saved.gain;
 
 function saveCalib() {
-  localStorage.setItem("tekmotor_calib_v11", JSON.stringify(saved));
+  localStorage.setItem("tekmotor_calib_v13", JSON.stringify(saved));
 }
 
 chkInvert.addEventListener("change", () => { saved.invert = chkInvert.checked; saveCalib(); });
@@ -105,13 +109,17 @@ selMotionMode.addEventListener("change", () => {
 });
 btnCalOpen.addEventListener("click", () => {
   if (lastRatio === null) { alert("Önce kamerada elinizi gösterin."); return; }
-  if (saved.mode === "thumb_slide") saved.thumbOpenRatio = lastRatio;
+  if (saved.mode === "index_cam") saved.indexMinDeg = lastRatio;
+  else if (saved.mode === "palm_tilt") saved.palmMinDeg = lastRatio;
+  else if (saved.mode === "thumb_slide") saved.thumbOpenRatio = lastRatio;
   else saved.openRatio = lastRatio;
   saveCalib();
 });
 btnCalClosed.addEventListener("click", () => {
   if (lastRatio === null) { alert("Önce kamerada elinizi gösterin."); return; }
-  if (saved.mode === "thumb_slide") saved.thumbClosedRatio = lastRatio;
+  if (saved.mode === "index_cam") saved.indexMaxDeg = lastRatio;
+  else if (saved.mode === "palm_tilt") saved.palmMaxDeg = lastRatio;
+  else if (saved.mode === "thumb_slide") saved.thumbClosedRatio = lastRatio;
   else saved.closedRatio = lastRatio;
   saveCalib();
 });
@@ -376,14 +384,13 @@ function computeOpennessAngle(wl) {
   let ratio = 1.0;
   let minR = 0.85;
   let maxR = 1.55;
-  if (saved.mode === "index_cam") {
-    const dx = wl[8].x - wl[5].x;
-    const dy = wl[8].y - wl[5].y;
-    let angle = (Math.atan2(dx, -dy) * 180) / Math.PI;
-    if (saved.invert) angle = -angle;
-    angle = clamp(angle * saved.gain, -180, 180);
-    const openNorm = clamp((angle + 180) / 360, 0, 1);
-    return { angle, openNorm };
+ if (saved.mode === "index_cam" || saved.mode === "palm_tilt") {
+   const pA = saved.mode === "index_cam" ? wl[5] : wl[0]; const pB = saved.mode === "index_cam" ? wl[8] : wl[9];
+   const rawDeg = (Math.atan2(pB.x - pA.x, -(pB.y - pA.y)) * 180) / Math.PI; lastRatio = rawDeg;
+   const minD = saved.mode === "index_cam" ? saved.indexMinDeg : saved.palmMinDeg; const maxD = saved.mode === "index_cam" ? saved.indexMaxDeg : saved.palmMaxDeg;
+   let span = maxD - minD; if (Math.abs(span) < 5) span = span >= 0 ? 5 : -5;
+   const openNorm = clamp((rawDeg - minD) / span, 0, 1); let angle = -180 + openNorm * 360;
+   if (saved.invert) angle = -angle; angle = clamp(angle * saved.gain, -180, 180); return { angle, openNorm };
   }  
   if (saved.mode === "thumb_slide") {
     // Başparmak ucunun (4) serçe köküne (17) ve işaret köküne (5) göre durumu
