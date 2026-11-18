@@ -18,7 +18,7 @@
       <span class="dot" id="wsDot"></span>
       <div class="brand-text">
         <strong>TekMotorDeneme</strong>
-        <span class="ver-pill">V1.0 (±180°)</span>
+        <span class="ver-pill">V1.1 (Video Modu ±180°)</span>
       </div>
     </div>
     <div class="badges">
@@ -63,7 +63,7 @@
           <div class="card hand-card left-accent">
             <h3>Tek Motor Hedefi (M1) <span class="mini-status" id="handBadge">Yok</span></h3>
             <div class="single-gauge">
-              <span>Tam Açık (-180°) ↔ Tam Kapalı (+180°)</span>
+              <span>Başparmak İçeri (+180°) ↔ Dışarı/Açık (-180°)</span>
               <strong id="valM1">-180°</strong>
               <div class="bar-track"><div class="bar-fill" id="openBar"></div></div>
               <small id="openPctText">Açıklık: %100</small>
@@ -82,10 +82,16 @@
           </div>
 
           <div class="card">
-            <h3>Hızlı El Kalibrasyonu</h3>
+            <h3>Hareket Modu & Hızlı Kalibrasyon</h3>
+            <label class="field-label" style="margin-bottom:8px">Algılama Modu
+              <select id="selMotionMode">
+                <option value="thumb_slide" selected>Başparmak Kaydırma / Çevirme (Videodaki)</option>
+                <option value="fist">Tüm El Yumruk Aç / Kapa</option>
+              </select>
+            </label>
             <div class="controls-row">
-              <button id="btnCalOpen" class="btn">Tam Açık (-180°) Kaydet</button>
-              <button id="btnCalClosed" class="btn">Tam Kapalı (+180°) Kaydet</button>
+              <button id="btnCalOpen" class="btn">Uç 1 (-180°) Kaydet</button>
+              <button id="btnCalClosed" class="btn">Uç 2 (+180°) Kaydet</button>
             </div>
             <p class="hint">Varsayılan değerler çoğu elde doğrudan çalışır; isterseniz elinizi tam açık ve tam kapalı tutup bu butonlarla kendi elinize göre ayarlayabilirsiniz.</p>
           </div>

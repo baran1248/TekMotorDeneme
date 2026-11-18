@@ -34,6 +34,7 @@ const openBar = document.getElementById("openBar");
 const openPctText = document.getElementById("openPctText");
 const btnCalOpen = document.getElementById("btnCalOpen");
 const btnCalClosed = document.getElementById("btnCalClosed");
+const selMotionMode = document.getElementById("selMotionMode");
 
 // PID Analiz elemanları
 const pidChart = document.getElementById("pidChart");
@@ -78,30 +79,40 @@ let lastSentAngle = -180;
 let lastRatio = null;
 
 // Kalibrasyon ayarları (localStorage)
-const saved = JSON.parse(localStorage.getItem("tekmotor_calib_v1") || "null") || {
+const saved = JSON.parse(localStorage.getItem("tekmotor_calib_v11") || "null") || {
+  mode: "thumb_slide",
+  thumbOpenRatio: 1.55,
+  thumbClosedRatio: 0.85,
   openRatio: 1.90,
   closedRatio: 0.85,
   invert: false,
   gain: 1.0
 };
+selMotionMode.value = saved.mode || "thumb_slide";
 chkInvert.checked = saved.invert;
 inpGain.value = saved.gain;
 
 function saveCalib() {
-  localStorage.setItem("tekmotor_calib_v1", JSON.stringify(saved));
+  localStorage.setItem("tekmotor_calib_v11", JSON.stringify(saved));
 }
 
 chkInvert.addEventListener("change", () => { saved.invert = chkInvert.checked; saveCalib(); });
 inpGain.addEventListener("change", () => { saved.gain = Number(inpGain.value) || 1.0; saveCalib(); });
 
+selMotionMode.addEventListener("change", () => {
+  saved.mode = selMotionMode.value;
+  saveCalib();
+});
 btnCalOpen.addEventListener("click", () => {
   if (lastRatio === null) { alert("Önce kamerada elinizi gösterin."); return; }
-  saved.openRatio = lastRatio;
+  if (saved.mode === "thumb_slide") saved.thumbOpenRatio = lastRatio;
+  else saved.openRatio = lastRatio;
   saveCalib();
 });
 btnCalClosed.addEventListener("click", () => {
   if (lastRatio === null) { alert("Önce kamerada elinizi gösterin."); return; }
-  saved.closedRatio = lastRatio;
+  if (saved.mode === "thumb_slide") saved.thumbClosedRatio = lastRatio;
+  else saved.closedRatio = lastRatio;
   saveCalib();
 });
 
@@ -359,16 +370,29 @@ function drawPidChart() {
 function clamp(v, min, max) { return Math.max(min, Math.min(max, v)); }
 function dist(a, b) { return Math.hypot(b.x - a.x, b.y - a.y, b.z - a.z); }
 
-// El açıklık oranı -> Tam Açık (-180°) .. Tam Kapalı (+180°)
+// Videodaki başparmak kaydırma/çevirme hareketi + yumruk modu
 function computeOpennessAngle(wl) {
   const palmSize = dist(wl[0], wl[9]) || 0.09;
-  const tipAvg = (dist(wl[0], wl[8]) + dist(wl[0], wl[12]) + dist(wl[0], wl[16]) + dist(wl[0], wl[20])) / 4;
-  const ratio = tipAvg / palmSize;
-  lastRatio = ratio;
+  let ratio = 1.0;
+  let minR = 0.85;
+  let maxR = 1.55;
 
-  const span = Math.max(0.15, saved.openRatio - saved.closedRatio);
-  const openNorm = clamp((ratio - saved.closedRatio) / span, 0, 1); // 1 = tam açık, 0 = tam kapalı
-  let angle = 180 - openNorm * 360; // Açık = -180°, Kapalı = +180°
+  if (saved.mode === "thumb_slide") {
+    // Başparmak ucunun (4) serçe köküne (17) ve işaret köküne (5) göre durumu
+    ratio = dist(wl[4], wl[17]) / palmSize;
+    minR = saved.thumbClosedRatio;
+    maxR = saved.thumbOpenRatio;
+  } else {
+    const tipAvg = (dist(wl[0], wl[8]) + dist(wl[0], wl[12]) + dist(wl[0], wl[16]) + dist(wl[0], wl[20])) / 4;
+    ratio = tipAvg / palmSize;
+    minR = saved.closedRatio;
+    maxR = saved.openRatio;
+  }
+
+  lastRatio = ratio;
+  const span = Math.max(0.10, maxR - minR);
+  const openNorm = clamp((ratio - minR) / span, 0, 1); // 1 = Uç 1 (-180°), 0 = Uç 2 (+180°)
+  let angle = 180 - openNorm * 360;
   if (saved.invert) angle = -angle;
   angle = clamp(angle * saved.gain, -180, 180);
   return { angle, openNorm };
