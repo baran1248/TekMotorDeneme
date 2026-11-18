@@ -1,4 +1,4 @@
-const CACHE_NAME = "tek-motor-deneme-v1.3";
+const CACHE_NAME = "tek-motor-deneme-v1.4";
 const APP_SHELL = [
   "./",
   "./index.html",
