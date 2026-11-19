@@ -30,6 +30,9 @@ const rngDeadband = document.getElementById("rngDeadband");
 const lblAlpha = document.getElementById("lblAlpha");
 const lblDeadband = document.getElementById("lblDeadband");
 
+const touchSensWrap = document.getElementById("touchSensWrap");
+const rngTouchSens = document.getElementById("rngTouchSens");
+const lblTouchSens = document.getElementById("lblTouchSens");
 const valM1 = document.getElementById("valM1");
 const openBar = document.getElementById("openBar");
 const openPctText = document.getElementById("openPctText");
@@ -91,14 +94,18 @@ const saved = JSON.parse(localStorage.getItem("tekmotor_calib_v13") || "null") |
   openRatio: 1.90,
   closedRatio: 0.85,
   invert: false,
-  gain: 1.0
+  gain: 1.0,
+  touchSens: 0.5
 };
 selMotionMode.value = saved.mode || "thumb_slide";
 chkInvert.checked = saved.invert;
 inpGain.value = saved.gain;
+rngTouchSens.value = saved.touchSens || 0.5;
+lblTouchSens.textContent = (saved.touchSens || 0.5) + "x";
 function syncModeUI() {
   if (saved.mode === "touch_pad") touchPad.classList.add("active");
   else touchPad.classList.remove("active");
+  touchSensWrap.style.display = saved.mode === "touch_pad" ? "block" : "none";
 }
 syncModeUI();
 
@@ -107,6 +114,7 @@ function saveCalib() {
 }
 
 chkInvert.addEventListener("change", () => { saved.invert = chkInvert.checked; saveCalib(); });
+rngTouchSens.addEventListener("input", () => { saved.touchSens = Number(rngTouchSens.value); lblTouchSens.textContent = saved.touchSens + "x"; saveCalib(); });
 inpGain.addEventListener("change", () => { saved.gain = Number(inpGain.value) || 1.0; saveCalib(); });
 
 selMotionMode.addEventListener("change", () => {
@@ -515,7 +523,9 @@ touchPad.addEventListener("pointermove", (e) => {
     const dx = e.clientX - touchPrev.x;
     const dy = e.clientY - touchPrev.y;
     const proj = dx * touchDir.x + dy * touchDir.y;
-    let delta = proj * 0.6 * saved.gain;
+   const boxWidth = touchPad.clientWidth || 360;
+   const sens = saved.touchSens || 0.5;
+    let delta = proj *  (180 / boxWidth) * sens* saved.gain;
     if (saved.invert) delta = -delta;
     smoothedAngle = clamp(smoothedAngle + delta, -180, 180);
     touchPrev = { x: e.clientX, y: e.clientY };
