@@ -93,6 +93,12 @@
 <option value="touch_pad">Dokunma / Kaydırma Modu</option>
               </select>
             </label>
+           <div id="touchSensWrap" style="display:none; margin-bottom:8px;">
+              <label>
+                <span class="slider-head"><span>Kaydırma Hassasiyeti</span><strong id="lblTouchSens">0.5x</strong></span>
+              <input type="range" id="rngTouchSens" min="0.1" max="2.0" step="0.1" value="0.5" />
+              </label>
+           </div>
             <div class="controls-row">
               <button id="btnCalOpen" class="btn">Uç 1 (-180°) Kaydet</button>
               <button id="btnCalClosed" class="btn">Uç 2 (+180°) Kaydet</button>
